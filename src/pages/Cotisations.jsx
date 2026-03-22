@@ -4,7 +4,7 @@ import { Search, CheckCircle2, Clock, CreditCard } from 'lucide-react';
 
 export default function Cotisations() {
   const [units, setUnits] = useState([]);
-  const [paidUnitIds, setPaidUnitIds] = useState([]); // NEW: Tracks who has paid this month
+  const [paidUnitIds, setPaidUnitIds] = useState([]); 
   const [searchTerm, setSearchTerm] = useState('');
 
   const currentMonth = new Date().toLocaleString('fr-FR', { month: 'long', year: 'numeric' });
@@ -13,7 +13,6 @@ export default function Cotisations() {
     fetchData();
   }, []);
 
-  // UPDATED: Now fetches BOTH units and this month's payments
   async function fetchData() {
     // 1. Fetch all units
     const { data: unitsData } = await supabase.from('units').select('*').order('unit_number', { ascending: true });
@@ -26,21 +25,16 @@ export default function Cotisations() {
     const { data: paymentsData } = await supabase
       .from('payments')
       .select('unit_id')
-      .gte('created_at', startOfMonth); // Only get payments from the 1st of this month onwards
+      .gte('created_at', startOfMonth);
 
     if (paymentsData) {
-      // Create an array of just the IDs of units that have paid
       const paidIds = paymentsData.map(payment => payment.unit_id);
       setPaidUnitIds(paidIds);
     }
   }
 
-  // NEW: Saves the payment to Supabase
-  async function handleMarkAsPaid(unitId, amount, ownerName) {
-    const confirm = window.confirm(`Confirmer la réception de ${amount} MAD de la part de ${ownerName} ?`);
-    if (!confirm) return;
-
-    // Insert a new record into the 'payments' table
+  // UPDATED: 1-Click Silent Payment + Detailed Error Message
+  async function handleMarkAsPaid(unitId, amount) {
     const { error } = await supabase.from('payments').insert([
       {
         unit_id: unitId,
@@ -52,7 +46,8 @@ export default function Cotisations() {
       fetchData(); // Refresh the list to instantly turn the badge green!
     } else {
       console.error("Erreur lors du paiement:", error);
-      alert("Erreur: Le paiement n'a pas pu être enregistré.");
+      // THIS IS THE NEW LINE: It will show us the exact database error!
+      alert("Erreur Supabase: " + (error.message || JSON.stringify(error))); 
     }
   }
 
@@ -96,7 +91,6 @@ export default function Cotisations() {
           <tbody className="divide-y divide-slate-700/50 text-slate-200">
             {filteredUnits.length > 0 ? filteredUnits.map((unit) => {
               
-              // NEW: Check if this specific unit's ID is in our list of paid IDs
               const hasPaid = paidUnitIds.includes(unit.id);
 
               return (
@@ -105,7 +99,6 @@ export default function Cotisations() {
                   <td className="px-8 py-5">{unit.owner_name}</td>
                   <td className="px-8 py-5 font-bold text-white">{unit.monthly_fee} MAD</td>
                   <td className="px-8 py-5">
-                    {/* UPDATED: Dynamic Status Badge */}
                     {hasPaid ? (
                       <div className="flex items-center gap-2 text-emerald-500 bg-emerald-500/10 w-fit px-3 py-1.5 rounded-lg text-sm font-bold border border-emerald-500/20">
                         <CheckCircle2 size={16} /> Payé
@@ -117,10 +110,9 @@ export default function Cotisations() {
                     )}
                   </td>
                   <td className="px-8 py-5 text-right">
-                    {/* UPDATED: Hide the Payer button if they already paid! */}
                     {!hasPaid ? (
                       <button 
-                        onClick={() => handleMarkAsPaid(unit.id, unit.monthly_fee, unit.owner_name)}
+                        onClick={() => handleMarkAsPaid(unit.id, unit.monthly_fee)}
                         className="bg-emerald-500/10 hover:bg-emerald-500 hover:text-white text-emerald-500 border border-emerald-500/20 px-4 py-2 rounded-xl font-bold transition-all flex items-center gap-2 ml-auto"
                       >
                         <CreditCard size={18} /> Payer
