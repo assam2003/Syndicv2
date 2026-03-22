@@ -3,14 +3,15 @@ import Sidebar from './components/Sidebar';
 import TopNav from './components/TopNav';
 import Proprietaires from './pages/Proprietaires';
 import Dashboard from './pages/Dashboard';
+import Cotisations from './pages/Cotisations'; // NEW: Imported the Cotisations page
 
 function App() {
-  // NEW: This state remembers which page you are currently on
+  // This state remembers which page you are currently on
   const [activePage, setActivePage] = useState('dashboard');
 
   return (
     <div className="flex min-h-screen bg-slate-900 font-sans">
-      {/* NEW: We pass the activePage and setActivePage to the Sidebar */}
+      {/* We pass the activePage and setActivePage to the Sidebar */}
       <Sidebar activePage={activePage} setActivePage={setActivePage} />
 
       {/* Main Content Area */}
@@ -18,10 +19,12 @@ function App() {
         <TopNav />
         
         <main className="p-8">
-          {/* NEW: Conditional Rendering. Show the page based on activePage state */}
+          {/* Conditional Rendering. Show the page based on activePage state */}
           {activePage === 'dashboard' && <Dashboard />}
           {activePage === 'proprietaires' && <Proprietaires />}
-          {activePage === 'cotisations' && <div className="text-white">Page Cotisations en construction...</div>}
+          
+          {/* UPDATED: Now showing the real Cotisations page instead of text! */}
+          {activePage === 'cotisations' && <Cotisations />}
         </main>
       </div>
     </div>
