@@ -6,6 +6,9 @@ export default function Proprietaires() {
   const [owners, setOwners] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newOwner, setNewOwner] = useState({ unit_number: '', owner_name: '', monthly_fee: '' });
+  
+  // NEW: State for the search bar
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchOwners();
@@ -14,6 +17,23 @@ export default function Proprietaires() {
   async function fetchOwners() {
     const { data } = await supabase.from('units').select('*').order('unit_number', { ascending: true });
     if (data) setOwners(data);
+  }
+
+  // NEW: Function to delete an owner
+  async function handleDeleteOwner(id) {
+    const confirmed = window.confirm("Êtes-vous sûr de vouloir supprimer ce propriétaire ?");
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from('units')
+      .delete()
+      .eq('id', id);
+
+    if (!error) {
+      fetchOwners(); // Refresh the list after deleting
+    } else {
+      alert("Erreur lors de la suppression");
+    }
   }
 
   async function handleAddOwner(e) {
@@ -33,13 +53,25 @@ export default function Proprietaires() {
     }
   }
 
+  // NEW: Filter logic for the search bar
+  const filteredOwners = owners.filter(owner => 
+    owner.owner_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    owner.unit_number.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-8">
       {/* HEADER SECTION */}
       <div className="flex items-center justify-between">
         <div className="bg-slate-800/50 flex items-center gap-3 px-4 py-2 rounded-xl border border-slate-700 w-96">
           <Search size={18} className="text-slate-500" />
-          <input type="text" placeholder="Rechercher..." className="bg-transparent border-none outline-none text-white w-full text-sm" />
+          <input 
+            type="text" 
+            placeholder="Rechercher..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="bg-transparent border-none outline-none text-white w-full text-sm" 
+          />
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
@@ -61,21 +93,34 @@ export default function Proprietaires() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-700/50 text-slate-200">
-            {owners.map((owner) => (
+            {/* NEW: Map through filteredOwners instead of all owners */}
+            {filteredOwners.length > 0 ? filteredOwners.map((owner) => (
               <tr key={owner.id} className="hover:bg-slate-700/20 transition-colors">
                 <td className="px-8 py-5 font-bold">{owner.unit_number}</td>
                 <td className="px-8 py-5">{owner.owner_name}</td>
                 <td className="px-8 py-5 text-emerald-400 font-bold">{owner.monthly_fee} MAD</td>
                 <td className="px-8 py-5 text-right space-x-2">
-                   <button className="p-2 hover:text-rose-400"><Trash2 size={18} /></button>
+                   {/* NEW: Wired up the Delete button */}
+                   <button 
+                     onClick={() => handleDeleteOwner(owner.id)} 
+                     className="p-2 text-slate-500 hover:text-rose-400 transition-colors"
+                   >
+                     <Trash2 size={18} />
+                   </button>
                 </td>
               </tr>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan="4" className="px-8 py-10 text-center text-slate-500">
+                  Aucun propriétaire trouvé.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* ADD OWNER MODAL (Recreating your screenshot design) */}
+      {/* ADD OWNER MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
